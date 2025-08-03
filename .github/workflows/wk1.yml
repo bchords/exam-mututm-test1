@@ -17,11 +17,15 @@ jobs:
         with:
           dotnet-version: '8.0.x'
           
-      - name: Build and package app
+      
+      - name: dotnet build and publish
         run: |
-          dotnet publish ./az2006webapp.csproj -c Release -o ./publish
+          dotnet restore FruitAPI/FruitAPI.csproj
+          dotnet build FruitAPI/FruitAPI.csproj --configuration Release
+          dotnet publish FruitAPI/FruitAPI.csproj -c Release --output ./publish
           cd ./publish && zip -r ../app.zip .
-          
+
+
       - uses: azure/login@v1
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
