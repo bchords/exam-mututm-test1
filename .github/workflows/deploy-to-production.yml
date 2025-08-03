@@ -1,1 +1,49 @@
+name: Deploy To Production
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  AZURE_WEBAPP_NAME: AppSmutum # set this to your application's name
+  AZURE_WEBAPP_PACKAGE_PATH: "./publish" # set this to the path to your web app project, defaults to the repository root
+  DOTNET_VERSION: "8.0.x" # set this to the dot net version to use
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      # Checkout the repo
+      - uses: actions/checkout@main
+      
+      # Setup .NET Core SDK
+      - name: Setup .NET Core
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+      
+      # Run dotnet build and publish
+      - name: dotnet build and publish
+        run: |
+          dotnet restore FruitAPI/FruitAPI.csproj
+          dotnet build FruitAPI/FruitAPI.csproj --configuration Release
+          dotnet publish FruitAPI/FruitAPI.csproj -c Release --output ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
+      
+      - name: "Login via Azure CLI"
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+      
+      # Deploy to Azure Web apps
+      - name: "Run Azure webapp deploy action using publish profile credentials"
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ env.AZURE_WEBAPP_NAME }}
+          package: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
+          slot-name: production
+
+
 
