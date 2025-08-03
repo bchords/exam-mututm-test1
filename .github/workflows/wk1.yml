@@ -42,7 +42,7 @@ jobs:
       - name: Run Azure Load Testing
         uses: azure/load-testing@v1
         with:
-          loadtestConfigFile: 'config.yml'
+          loadtestConfigFile: 'test1.yml'
           loadtestResource: ${{ env.LOAD_TEST_RESOURCE }}
           resourceGroup: ${{ env.RESOURCE_GROUP }}
           env: |
