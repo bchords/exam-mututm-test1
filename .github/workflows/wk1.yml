@@ -1,0 +1,56 @@
+name: wk1
+on:
+  pull_request:
+    branches: [main]
+env:
+  AZURE_WEBAPP_NAME: AppSmutum
+  RESOURCE_GROUP: RG1
+  LOAD_TEST_RESOURCE: az2006loadtest  # Replace with actual resource name
+  
+jobs:
+  complete-pipeline:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+          
+      - name: Build and package app
+        run: |
+          dotnet publish ./az2006webapp.csproj -c Release -o ./publish
+          cd ./publish && zip -r ../app.zip .
+          
+      - uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+          
+      # Changed: Use azure/webapps-deploy@v3 instead of azure/cli
+      - name: Deploy to Azure Web App staging slot
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ env.AZURE_WEBAPP_NAME }}
+          slot-name: staging
+          package: app.zip
+          
+      # Changed: Use azure/load-testing@v1 instead of CLI commands
+      - name: Run Azure Load Testing
+        uses: azure/load-testing@v1
+        with:
+          loadtestConfigFile: 'config.yml'
+          loadtestResource: ${{ env.LOAD_TEST_RESOURCE }}
+          resourceGroup: ${{ env.RESOURCE_GROUP }}
+          env: |
+            [
+              {
+                "name": "HTTPSample.domain",
+                "value": "https://${{ env.AZURE_WEBAPP_NAME }}-staging.azurewebsites.net"
+              }
+            ]
+            
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: loadTestResults
+          path: loadTest/results.zip
