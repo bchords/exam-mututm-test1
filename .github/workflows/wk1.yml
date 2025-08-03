@@ -24,8 +24,11 @@ jobs:
           dotnet build FruitAPI/FruitAPI.csproj --configuration Release
           dotnet publish FruitAPI/FruitAPI.csproj -c Release --output ./publish
           cd ./publish && zip -r ../app.zip .
-
-
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '16'
+        
       - uses: azure/login@v1
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
@@ -52,9 +55,18 @@ jobs:
                 "value": "https://${{ env.AZURE_WEBAPP_NAME }}-staging.azurewebsites.net"
               }
             ]
+        id: loadtest
             
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: loadTestResults
           path: loadTest/results.zip
+          
+      - name: Check load test results
+        run: |
+          if [ "${{ steps.loadtest.outputs.result }}" != "PASSED" ]; then
+            echo "Load test failed according to test1.yml criteria"
+            exit 1
+          fi
+          echo "Load test passed according to test1.yml criteria"
